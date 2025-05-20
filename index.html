@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Deploy Memecoin - Zenchain Testnet</title>
+  <script defer src="https://unpkg.com/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 600px;
+      margin: 20px auto;
+      padding: 20px;
+      text-align: center;
+      background-color: #f0f0f0;
+    }
+    h1 {
+      color: #2c3e50;
+      font-size: 24px;
+    }
+    .form-group {
+      margin: 15px 0;
+    }
+    label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: bold;
+      color: #34495e;
+    }
+    input {
+      width: 100%;
+      padding: 10px;
+      font-size: 16px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      box-sizing: border-box;
+    }
+    button {
+      background-color: #3498db;
+      color: white;
+      padding: 12px 20px;
+      border: none;
+      border-radius: 5px;
+      font-size: 16px;
+      cursor: pointer;
+      margin-top: 10px;
+    }
+    button:disabled {
+      background-color: #95a5a6;
+      cursor: not-allowed;
+    }
+    #result {
+      margin-top: 20px;
+      word-break: break-all;
+      color: #27ae60;
+      font-size: 14px;
+    }
+    #error {
+      margin-top: 20px;
+      color: #c0392b;
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Deploy Memecoin di Zenchain Testnet</h1>
+  <div class="form-group">
+    <label for="name">Nama Token</label>
+    <input type="text" id="name" placeholder="Contoh: DogeCoin" />
+  </div>
+  <div class="form-group">
+    <label for="symbol">Simbol Token</label>
+    <input type="text" id="symbol" placeholder="Contoh: DOGE" />
+  </div>
+  <div class="form-group">
+    <label for="supply">Jumlah Awal</label>
+    <input type="number" id="supply" placeholder="Contoh: 1000000" />
+  </div>
+  <button id="deployBtn" onclick="deployToken()">Deploy Token</button>
+  <div id="result"></div>
+  <div id="error"></div>
+
+  <script>
+    if (typeof ethers === 'undefined') {
+      document.getElementById("error").innerHTML = "Error: ethers.js gagal dimuat. Refresh halaman atau periksa internet.";
+      throw new Error("ethers.js tidak dimuat");
+    }
+
+    const tokenAbi = [
+      {
+        "inputs": [
+          { "internalType": "string", "name": "name", "type": "string" },
+          { "internalType": "string", "name": "symbol", "type": "string" },
+          { "internalType": "uint256", "name": "initialSupply", "type": "uint256" }
+        ],
+        "stateMutability": "nonpayable",
+        "type": "constructor"
+      },
+      {
+        "inputs": [
+          { "internalType": "address", "name": "spender", "type": "address" },
+          { "internalType": "uint256", "name": "allowance", "type": "uint256" },
+          { "internalType": "uint256", "name": "needed", "type": "uint256" }
+        ],
+        "name": "ERC20InsufficientAllowance",
+        "type": "error"
+      },
+      {
+        "inputs": [
+          { "internalType": "address", "name": "sender", "type": "address" },
+          { "internalType": "uint256", "name": "balance", "type": "uint256" },
+          { "internalType": "uint256", "name": "needed", "type": "uint256" }
+        ],
+        "name": "ERC20InsufficientBalance",
+        "type": "error"
+      },
+      {
+        "inputs": [{ "internalType": "address", "name": "approver", "type": "address" }],
+        "name": "ERC20InvalidApprover",
+        "type": "error"
+      },
+      {
+        "inputs": [{ "internalType": "address", "name": "receiver", "type": "address" }],
+        "name": "ERC20InvalidReceiver",
+        "type": "error"
+      },
+      {
+        "inputs": [{ "internalType": "address", "name": "sender", "type": "address" }],
+        "name": "ERC20InvalidSender",
+        "type": "error"
+      },
+      {
+        "inputs": [{ "internalType": "address", "name": "spender", "type": "address" }],
+        "name": "ERC20InvalidSpender",
+        "type": "error"
+      },
+      {
+        "anonymous": false,
+        "inputs": [
+          { "indexed": true, "internalType": "address", "name": "owner", "type": "address" },
+          { "indexed": true, "internalType": "address", "name": "spender", "type": "address" },
+          { "indexed": false, "internalType": "uint256", "name": "value", "type": "uint256" }
+        ],
+        "name": "Approval",
+        "type": "event"
+      },
+      {
+        "anonymous": false,
+        "inputs": [
+          { "indexed": true, "internalType": "address", "name": "from", "type": "address" },
+          { "indexed": true, "internalType": "address", "name": "to", "type": "address" },
+          { "indexed": false, "internalType": "uint256", "name": "value", "type": "uint256" }
+        ],
+        "name": "Transfer",
+        "type": "event"
+      },
+      {
+        "inputs": [
+          { "internalType": "address", "name": "owner", "type": "address" },
+          { "internalType": "address", "name": "spender", "type": "address" }
+        ],
+        "name": "allowance",
+        "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
+        "stateMutability": "view",
+        "type": "function"
+      },
+      {
+        "inputs": [
+          { "internalType": "address", "name": "spender", "type": "address" },
+          { "internalType": "uint256", "name": "value", "type": "uint256" }
+        ],
+        "name": "approve",
+        "outputs": [{ "internalType": "bool", "name": "", "type": "bool" }],
+        "stateMutability": "nonpayable",
+        "type": "function"
+      },
+      {
+        "inputs": [{ "internalType": "address", "name": "account", "type": "address" }],
+        "name": "balanceOf",
+        "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
+        "stateMutability": "view",
+        "type": "function"
+      },
+      {
+        "inputs": [],
+        "name": "decimals",
+        "outputs": [{ "internalType": "uint8", "name": "", "type": "uint8" }],
+        "stateMutability": "view",
+        "type": "function"
+      },
+      {
+        "inputs": [],
+        "name": "name",
+        "outputs": [{ "internalType": "string", "name": "", "type": "string" }],
+        "stateMutability": "view",
+        "type": "function"
+      },
+      {
+        "inputs": [],
+        "name": "symbol",
+        "outputs": [{ "internalType": "string", "name": "", "type": "string" }],
+        "stateMutability": "view",
+        "type": "function"
+      },
+      {
+        "inputs": [],
+        "name": "totalSupply",
+        "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
+        "stateMutability": "view",
+        "type": "function"
+      },
+      {
+        "inputs": [
+          { "internalType": "address", "name": "to", "type": "address" },
+          { "internalType": "uint256", "name": "value", "type": "uint256" }
+        ],
+        "name": "transfer",
+        "outputs": [{ "internalType": "bool", "name": "", "type": "bool" }],
+        "stateMutability": "non
